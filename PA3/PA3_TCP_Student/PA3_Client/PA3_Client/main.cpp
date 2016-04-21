@@ -125,7 +125,7 @@ int main(void)
 		Trace::out("Sent: %dB \t---\t Type: %d TotalNum: %d PacketSize: %d\n", iSendResult, packet.type, packet.a, packet.b);
 		iRecvResult = recv(Socket, recvBuffer, sizeof(recvBuffer), 0);
 		if (iRecvResult > 0) {
-			// parse the packet
+			// Parse the packet
 			memcpy(&packet, recvBuffer, sizeof(&packet));
 			if (packet.type == Type::Ack)
 			{
@@ -171,7 +171,7 @@ int main(void)
 			Trace::out("Sent: %dB \t---\t Type: %d Rank: %d Value: %d\n", iSendResult, packet.type, packet.a, packet.b);
 			iRecvResult = recv(Socket, recvBuffer, sizeof(recvBuffer), 0);
 			if (iRecvResult > 0) {
-				// parse the packet
+				// Parse the packet
 				memcpy(&packet, recvBuffer, sizeof(&packet));
 				if (packet.type == Type::Ack)
 				{
@@ -212,7 +212,7 @@ int main(void)
 		Trace::out("Sent: %dB \t---\t Type: %d\n Sent a stop msg.", iSendResult, packet.type);
 		iRecvResult = recv(Socket, recvBuffer, sizeof(recvBuffer), 0);
 		if (iRecvResult > 0) {
-			// parse the packet
+			// Parse the packet
 			memcpy(&packet, recvBuffer, sizeof(&packet));
 			if (packet.type == Type::Ack)
 			{
@@ -225,7 +225,7 @@ int main(void)
 		}
 		else
 		{
-			Trace::out("recv failed with error: %d\n", WSAGetLastError());
+			Trace::out("Recv failed with error: %d\n", WSAGetLastError());
 			closesocket(Socket);
 			WSACleanup();
 			system("PAUSE");
@@ -240,7 +240,6 @@ int main(void)
 		iRecvResult = recv(Socket, recvBuffer, sizeof(recvBuffer), 0);
 		if (iRecvResult > 0) 
 		{
-			// parse the packet
 			memcpy(&packet, recvBuffer, sizeof(packet));
 			if (packet.type == Type::Value) 
 			{
@@ -248,7 +247,7 @@ int main(void)
 				++it;
 				Trace::out("Recv: %dB \t---\t Type: %d Rank: %d Value: %d\n", iRecvResult, packet.type, packet.a, packet.b);
 
-				// send ack message to client
+				// Send ack message to server
 				packet.type = Type::Ack;
 				packet.a = -1;
 				packet.b = -1;
@@ -290,7 +289,7 @@ int main(void)
 	}
 	
 
-	// shutdown the connection since no more data will be sent
+	// Shutdown the connection since no more data will be sent
 	iSendResult = shutdown(Socket, SD_SEND);
 	if (iSendResult == SOCKET_ERROR) {
 		Trace::out("Shutdown failed with error: %d\n", WSAGetLastError());
@@ -300,7 +299,6 @@ int main(void)
 		return 1;
 	}
 	
-
 	// Shutdown our socket
 	shutdown(Socket, SD_SEND);
 	Trace::out("Shutdown socket.\n");

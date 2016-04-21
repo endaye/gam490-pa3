@@ -96,7 +96,7 @@ int main()
 	do {
 		iRecvResult = recv(TempSock, recvBuffer, sizeof(recvBuffer), 0);
 		if (iRecvResult > 0) {
-			// parse the packet
+			// Parse the packet
 			memcpy(&packet, recvBuffer, sizeof(packet));
 			switch (packet.type)
 			{
@@ -108,7 +108,7 @@ int main()
 				Trace::out("Recv: %dB \t---\t Type: %d TotalNum: %d PacketSize: %d\n", iRecvResult, packet.type, totalNum, packetSize);
 				Trace::out("Start to recieve msg...\n");
 				
-				// send ack message to client
+				// Send ack message to client
 				packet.type = Type::Ack;
 				packet.a = -1;
 				packet.b = -1;
@@ -264,7 +264,7 @@ int main()
 			}
 			else
 			{
-				Trace::out("recv failed with error: %d\n", WSAGetLastError());
+				Trace::out("Recv failed with error: %d\n", WSAGetLastError());
 				closesocket(TempSock);
 				closesocket(Socket);
 				WSACleanup();
@@ -283,7 +283,7 @@ int main()
 		Trace::out("Server: Sent WRONG numbers!\n");
 	}
 
-	// shutdown the connection since we're done
+	// Shutdown the connection since we're done
 	iRecvResult = shutdown(TempSock, SD_SEND);
 	if (iRecvResult == SOCKET_ERROR) {
 		Trace::out("Shutdown failed with error: %d\n", WSAGetLastError());
