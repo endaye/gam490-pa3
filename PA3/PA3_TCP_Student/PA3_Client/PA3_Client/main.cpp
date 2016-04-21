@@ -17,6 +17,19 @@
 #define DEFAULT_PORT 8888
 #define DEFAULT_ACK_MSG "Client: Got the MSG."
 
+enum Type { 
+	Start = 1, 
+	Stop  = 2, 
+	Value = 3, 
+	Ack   = 4
+};
+
+struct Packet {
+	Type		type;
+	int			a;		// totalNum or Rank
+	int			b;		// packetSize of Data
+} info;
+
 int main(void)
 {
 	//--------------------------------------------------------
@@ -89,58 +102,215 @@ int main(void)
 		return 0;
 	}
 
-	// Send an initial buffer
-	char sendBuffer[DEFAULT_BUFLEN];
+	// Send a start
+	Packet packet;
+	packet.type = Type::Start;
+	packet.a = rNodeList.size();
+	packet.b = sizeof(int);
+
 	char recvBuffer[DEFAULT_BUFLEN];
-	memset(sendBuffer, 0, DEFAULT_BUFLEN - 1);
 	memset(recvBuffer, 0, DEFAULT_BUFLEN - 1);
 
-	for (std::list<int>::iterator it = rNodeList.begin(); it != rNodeList.end(); ++it)
+	iSendResult = send(Socket, (char *)&packet, sizeof(packet), 0);
+	if (iSendResult == SOCKET_ERROR)
 	{
-		iSendResult = send(Socket, (char *)&(*it), sizeof(int), 0);
-		if (iSendResult == SOCKET_ERROR)
-		{
-			Trace::out("Send failed with error: %d\n", WSAGetLastError());
-			closesocket(Socket);
-			WSACleanup();
-			return 1;
-		}
-		Trace::out("Sent: %dB \t---\t Msg: %d\n", iSendResult, *it);
-		iRecvResult = recv(Socket, recvBuffer, DEFAULT_BUFLEN, 0);
-		if (iRecvResult > 0)
-		{
-			Trace::out("Recv: %dB \t---\t Msg: %s\n", iRecvResult, recvBuffer);
+		Trace::out("Send failed with error: %d\n", WSAGetLastError());
+		closesocket(Socket);
+		WSACleanup();
+		system("PAUSE");
+		return 1;
+	}
+	else
+	{
+		Trace::out("Sent: %dB \t---\t Type: %d TotalNum: %d PacketSize: %d\n", iSendResult, packet.type, packet.a, packet.b);
+		iRecvResult = recv(Socket, recvBuffer, sizeof(recvBuffer), 0);
+		if (iRecvResult > 0) {
+			// parse the packet
+			memcpy(&packet, recvBuffer, sizeof(&packet));
+			if (packet.type == Type::Ack)
+			{
+				Trace::out("Recv: %dB \t---\t Type: %d\n", iRecvResult, packet.type);
+			}
 		}
 		else if (iRecvResult == 0)
 		{
-			Trace::out("Connection closed\n");
+			Trace::out("Connection closing...\n");
+		}	
+		else  
+		{
+			Trace::out("recv failed with error: %d\n", WSAGetLastError());
+			closesocket(Socket);
+			WSACleanup();
+			system("PAUSE");
+			return 1;
+		}
+	}
+	
+	// Send number data
+	int i(0);
+	std::list<int>::iterator it = rNodeList.begin();
+	do 
+	{
+		packet.type = Type::Value;	// Header
+		packet.a = i;				// Rank
+		packet.b = *it;				// Value
+		iSendResult = send(Socket, (char *)&packet, sizeof(packet), 0);
+		if (iSendResult == SOCKET_ERROR)
+		{
+			Trace::out("Send failed with error: %d\n", WSAGetLastError());
+			Trace::out("Sent out %d numbers\n", i);
+			closesocket(Socket);
+			WSACleanup();
+			system("PAUSE");
+			return 1;
+		} 
+		else
+		{
+			i++;
+			++it;
+			Trace::out("Sent: %dB \t---\t Type: %d Rank: %d Value: %d\n", iSendResult, packet.type, packet.a, packet.b);
+			iRecvResult = recv(Socket, recvBuffer, sizeof(recvBuffer), 0);
+			if (iRecvResult > 0) {
+				// parse the packet
+				memcpy(&packet, recvBuffer, sizeof(&packet));
+				if (packet.type == Type::Ack)
+				{
+					Trace::out("Recv: %dB \t---\t Type: %d\n", iRecvResult, packet.type);
+				}
+			}
+			else if (iRecvResult == 0)
+			{
+				Trace::out("Connection closing...\n");
+			}
+			else
+			{
+				Trace::out("recv failed with error: %d\n", WSAGetLastError());
+				closesocket(Socket);
+				WSACleanup();
+				system("PAUSE");
+				return 1;
+			}
+		}
+	} while (it != rNodeList.end());
+
+	// Send a stop 
+	packet.type = Type::Stop;
+	packet.a = -1;
+	packet.b = -1;
+
+	iSendResult = send(Socket, (char *)&packet, sizeof(packet), 0);
+	if (iSendResult == SOCKET_ERROR)
+	{
+		Trace::out("Send failed with error: %d\n", WSAGetLastError());
+		closesocket(Socket);
+		WSACleanup();
+		system("PAUSE");
+		return 1;
+	}
+	else
+	{
+		Trace::out("Sent: %dB \t---\t Type: %d\n Sent a stop msg.", iSendResult, packet.type);
+		iRecvResult = recv(Socket, recvBuffer, sizeof(recvBuffer), 0);
+		if (iRecvResult > 0) {
+			// parse the packet
+			memcpy(&packet, recvBuffer, sizeof(&packet));
+			if (packet.type == Type::Ack)
+			{
+				Trace::out("Recv: %dB \t---\t Type: %d\n", iRecvResult, packet.type);
+			}
+		}
+		else if (iRecvResult == 0)
+		{
+			Trace::out("Connection closing...\n");
 		}
 		else
 		{
 			Trace::out("recv failed with error: %d\n", WSAGetLastError());
+			closesocket(Socket);
+			WSACleanup();
+			system("PAUSE");
+			return 1;
 		}
 	}
 	
+	// Receive sorted numbers
+	Trace::out("Client: Receiving sorted list...\n");
+	it = rNodeList.begin();
+	do {
+		iRecvResult = recv(Socket, recvBuffer, sizeof(recvBuffer), 0);
+		if (iRecvResult > 0) 
+		{
+			// parse the packet
+			memcpy(&packet, recvBuffer, sizeof(packet));
+			if (packet.type == Type::Value) 
+			{
+				(*it) = packet.b;
+				++it;
+				Trace::out("Recv: %dB \t---\t Type: %d Rank: %d Value: %d\n", iRecvResult, packet.type, packet.a, packet.b);
+
+				// send ack message to client
+				packet.type = Type::Ack;
+				packet.a = -1;
+				packet.b = -1;
+				iSendResult = send(Socket, (char *)&packet, sizeof(packet), 0);
+				if (iSendResult == SOCKET_ERROR) {
+					Trace::out("Send failed with error: %d\n", WSAGetLastError());
+					closesocket(Socket);
+					WSACleanup();
+					system("PAUSE");
+					return 1;
+				}
+				else
+				{
+					Trace::out("Sent: %dB \t---\t Type: %d\n", iSendResult, packet.type);
+				}
+			}
+		}
+		else if (iRecvResult == 0)
+		{
+			Trace::out("Connection closing...\n");
+		}
+		else  {
+			Trace::out("Recv failed with error: %d\n", WSAGetLastError());
+			closesocket(Socket);
+			WSACleanup();
+			system("PAUSE");
+			return 1;
+		}
+	} while (iRecvResult > 0 && it != rNodeList.end());
+
+
+	if (it == rNodeList.end())
+	{
+		Trace::out("Client: Received all sorted numbers.\n");
+	}
+	else 
+	{
+		Trace::out("Client: Received WRONG numbers!\n");
+	}
+	
+
 	// shutdown the connection since no more data will be sent
 	iSendResult = shutdown(Socket, SD_SEND);
 	if (iSendResult == SOCKET_ERROR) {
-		printf("shutdown failed with error: %d\n", WSAGetLastError());
+		Trace::out("Shutdown failed with error: %d\n", WSAGetLastError());
 		closesocket(Socket);
 		WSACleanup();
+		system("PAUSE");
 		return 1;
 	}
+	
 
 	// Shutdown our socket
 	shutdown(Socket, SD_SEND);
+	Trace::out("Shutdown socket.\n");
 
 	// Close our socket entirely
 	closesocket(Socket);
+	Trace::out("Close socket.\n");
 
 	// Cleanup Winsock
 	WSACleanup();
-	system("PAUSE");
-	return 0;
-
 
 	//--------------------------------------------------------
 	// Print the sorted data
