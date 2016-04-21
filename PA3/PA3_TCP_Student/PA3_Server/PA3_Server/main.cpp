@@ -5,11 +5,9 @@
 #include "Trace.h"
 #include <vector>
 #include <algorithm>
-#include <string>     // std::string, std::stoi
 
 #define DEFAULT_BUFLEN 1024
 #define DEFAULT_PORT 8888
-#define DEFAULT_ACK_MSG "Server: Got the MSG."
 
 enum Type {
 	Start = 1,
@@ -51,6 +49,10 @@ int main()
 		WSACleanup();
 		system("PAUSE");
 		return 0;
+	}
+	else
+	{
+		Trace::out("Use TCP connection.\r\n");
 	}
 
 	// Setup our socket address structure
